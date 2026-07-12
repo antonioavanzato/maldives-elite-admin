@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Maldives Elite — Панель заявок</title>
+<style>
+  :root {
+    --bg-1: #0B2430;
+    --bg-2: #0E2C39;
+    --surface: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.1);
+    --text: #F0EAD9;
+    --text-muted: #8FA9AC;
+    --text-dim: #5f7a7d;
+    --gold: #C9A24B;
+    --st-new: #E08E45;
+    --st-new-bg: rgba(224,142,69,0.12);
+    --st-progress: #5B9BD5;
+    --st-progress-bg: rgba(91,155,213,0.12);
+    --st-confirmed: #3FA796;
+    --st-confirmed-bg: rgba(63,167,150,0.14);
+    --st-closed: #8FA9AC;
+    --st-closed-bg: rgba(143,169,172,0.12);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .serif {
+    font-family: Georgia, "Times New Roman", serif;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand h1 { font-size: 22px; font-weight: 500; margin: 0; letter-spacing: 0.01em; }
+  .brand p { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin: 2px 0 0; }
+
+  main { padding: 32px 40px; max-width: 1200px; margin: 0 auto; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .stat-card {
+    text-align: left;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 16px 20px;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+  }
+  .stat-card.active { border-color: var(--gold); background: rgba(201,162,75,0.08); }
+  .stat-card .num { font-size: 30px; font-weight: 500; margin: 0; }
+  .stat-card .lbl { font-size: 12px; color: var(--text-muted); margin: 4px 0 0; }
+
+  .controls { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 9px 12px; background: var(--surface); flex: 1; min-width: 240px;
+  }
+  .search-box input {
+    background: transparent; border: none; outline: none; color: var(--text);
+    font-size: 14px; width: 100%;
+  }
+  .search-box input::placeholder { color: var(--text-dim); }
+
+  .filter-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    font-size: 12px; padding: 8px 14px; border-radius: 6px;
+    border: 1px solid var(--border); background: transparent; color: var(--text-muted);
+    cursor: pointer;
+  }
+  .chip.active { border-color: var(--gold); color: var(--gold); }
+
+  table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  thead th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-muted); background: rgba(255,255,255,0.04);
+    padding: 12px 20px; font-weight: 500;
+  }
+  tbody tr { border-top: 1px solid rgba(255,255,255,0.07); cursor: pointer; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td { padding: 14px 20px; font-size: 14px; }
+  td.muted { color: #B9C7C4; }
+
+  .status-pill { font-size: 12px; padding: 4px 10px; border-radius: 999px; display: inline-block; }
+
+  .empty-row td { text-align: center; padding: 40px; color: var(--text-muted); }
+
+  .footnote { font-size: 12px; color: var(--text-dim); margin-top: 24px; }
+
+  /* Detail drawer */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(5,15,20,0.6);
+    display: none; z-index: 50;
+  }
+  .overlay.open { display: block; }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 420px; max-width: 100%;
+    background: var(--bg-2); border-left: 1px solid var(--border);
+    padding: 28px 24px; overflow-y: auto;
+    transform: translateX(100%); transition: transform 0.2s ease;
+    z-index: 51;
+  }
+  .drawer.open { transform: translateX(0); }
+
+  .drawer-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .drawer-head .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin: 0 0 4px; }
+  .drawer-head h2 { margin: 0; font-size: 20px; }
+  .close-btn {
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    font-size: 18px; line-height: 1; padding: 4px;
+  }
+  .close-btn:hover { color: var(--text); }
+
+  .status-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  .status-btn {
+    font-size: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); cursor: pointer;
+  }
+  .status-btn.active { }
+
+  .field-row { display: flex; gap: 12px; margin-bottom: 18px; align-items: flex-start; }
+  .field-row .ic { color: var(--gold); margin-top: 2px; flex-shrink: 0; }
+  .field-row .lbl { font-size: 11px; color: var(--text-muted); margin: 0 0 2px; }
+  .field-row .val { margin: 0; color: var(--text); }
+
+  .section-block { border-top: 1px solid rgba(255,255,255,0.08); padding-top: 18px; margin-bottom: 18px; }
+  .section-block .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 0 0 10px; }
+
+  @media (max-width: 768px) {
+    header, main { padding-left: 16px; padding-right: 16px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    thead { display: none; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    tbody tr { padding: 12px 16px; }
+    tbody td { padding: 3px 0; }
+    td.label::before { content: attr(data-label); display: block; font-size: 10px; text-transform: uppercase; color: var(--text-dim); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C9A24B" stroke-width="1.5"><path d="M2 12c2 2 4 2 6 0s4-2 6 0 4 2 6 0M2 18c2 2 4 2 6 0s4-2 6 0 4 2 6 0M2 6c2 2 4 2 6 0s4-2 6 0 4 2 6 0"/></svg>
+    <div>
+      <h1 class="serif">Maldives Elite</h1>
+      <p>Панель заявок · ALGA</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="stats" id="stats"></div>
+
+  <div class="controls">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8FA9AC" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="search" type="text" placeholder="Поиск по имени, телефону, направлению">
+    </div>
+    <div class="filter-chips" id="filters"></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Клиент</th><th>Телефон</th><th>Направление</th><th>Даты</th><th>Бюджет</th><th>Статус</th>
+      </tr>
+    </thead>
+    <tbody id="table-body"></tbody>
+  </table>
+
+  <p class="footnote">Заявки поступают автоматически из формы на сайте и дублируются в Telegram-канал. Хранение — Yandex Cloud (подключается отдельно).</p>
+</main>
+
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer"></div>
+
+<script>
+  const STATUSES = {
+    new: { label: "Новая", color: "var(--st-new)", bg: "var(--st-new-bg)" },
+    progress: { label: "В работе", color: "var(--st-progress)", bg: "var(--st-progress-bg)" },
+    confirmed: { label: "Подтверждено", color: "var(--st-confirmed)", bg: "var(--st-confirmed-bg)" },
+    closed: { label: "Отклонено", color: "var(--st-closed)", bg: "var(--st-closed-bg)" },
+  };
+
+  // Демо-данные. В боевой версии массив leads будет приходить из API (Yandex Cloud).
+  let leads = [
+    { id: 1, client: "Анастасия Волкова", phone: "+7 917 234-56-01", destination: "Мальдивы", departureCity: "Москва", departDate: "2026-09-14", nights: "8 ночей", budget: 1200000, group: "Пара (2 взрослых)", villa: "Над водой", meal: "Все включено (All Inclusive)", reef: true, notes: "Годовщина свадьбы, нужен романтический ужин на пляже", status: "new", createdAt: "2026-07-11T09:12:00" },
+    { id: 2, client: "Дмитрий и Ольга Реутовы", phone: "+7 903 445-12-90", destination: "Мальдивы", departureCity: "Санкт-Петербург", departDate: "2026-08-02", nights: "10 ночей", budget: 2500000, group: "Семья с детьми", villa: "На пляже (пляжный фронт)", meal: "Все включено (All Inclusive)", reef: false, notes: "Требуется детский клуб на территории", status: "progress", createdAt: "2026-07-10T18:40:00" },
+    { id: 3, client: "Марат Хабибуллин", phone: "+7 927 118-77-03", destination: "Маврикий", departureCity: "Казань", departDate: "2026-11-20", nights: "7 ночей", budget: 1800000, group: "Компания друзей", villa: "Не важно", meal: "Полупансион (завтрак + ужин)", reef: true, notes: "", status: "confirmed", createdAt: "2026-07-09T14:05:00" },
+    { id: 4, client: "Елена Северова", phone: "+7 985 662-30-18", destination: "Мальдивы", departureCity: "Москва", departDate: "2026-10-05", nights: "7 ночей", budget: 1500000, group: "Пара (2 взрослых)", villa: "Над водой", meal: "Не важно", reef: true, notes: "Спрашивала про трансфер на гидросамолёте", status: "new", createdAt: "2026-07-11T07:22:00" },
+  ];
+
+  let state = { query: "", filter: "all", selectedId: null };
+
+  function formatDate(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
+  }
+  function formatDateTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" }) + ", " +
+      d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  }
+  function formatMoney(n) {
+    if (!n) return "—";
+    return new Intl.NumberFormat("ru-RU").format(n) + " ₽";
+  }
+  function esc(s) {
+    const d = document.createElement("div");
+    d.textContent = s ?? "";
+    return d.innerHTML;
+  }
+
+  function getCounts() {
+    const c = { all: leads.length, new: 0, progress: 0, confirmed: 0, closed: 0 };
+    leads.forEach(l => c[l.status]++);
+    return c;
+  }
+
+  function getFiltered() {
+    const q = state.query.trim().toLowerCase();
+    return leads
+      .filter(l => state.filter === "all" || l.status === state.filter)
+      .filter(l => !q || l.client.toLowerCase().includes(q) || l.phone.toLowerCase().includes(q) || l.destination.toLowerCase().includes(q))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  function renderStats() {
+    const c = getCounts();
+    const cards = [
+      { key: "all", label: "Всего заявок", value: c.all },
+      { key: "new", label: "Новые", value: c.new },
+      { key: "progress", label: "В работе", value: c.progress },
+      { key: "confirmed", label: "Подтверждено", value: c.confirmed },
+    ];
+    document.getElementById("stats").innerHTML = cards.map(s => `
+      <button class="stat-card ${state.filter === s.key ? "active" : ""}" data-filter="${s.key}">
+        <p class="num serif">${s.value}</p>
+        <p class="lbl">${s.label}</p>
+      </button>
+    `).join("");
+  }
+
+  function renderFilters() {
+    const keys = ["all", "new", "progress", "confirmed", "closed"];
+    document.getElementById("filters").innerHTML = keys.map(k => `
+      <button class="chip ${state.filter === k ? "active" : ""}" data-filter="${k}">
+        ${k === "all" ? "Все" : STATUSES[k].label}
+      </button>
+    `).join("");
+  }
+
+  function renderTable() {
+    const rows = getFiltered();
+    const body = document.getElementById("table-body");
+    if (rows.length === 0) {
+      body.innerHTML = `<tr class="empty-row"><td colspan="6">Заявок не найдено</td></tr>`;
+      return;
+    }
+    body.innerHTML = rows.map(l => {
+      const st = STATUSES[l.status];
+      return `
+        <tr data-id="${l.id}">
+          <td class="label" data-label="Клиент">${esc(l.client)}</td>
+          <td class="label muted" data-label="Телефон">${esc(l.phone)}</td>
+          <td class="label" data-label="Направление">${esc(l.destination)}</td>
+          <td class="label muted" data-label="Даты">${formatDate(l.departDate)} · ${esc(l.nights)}</td>
+          <td class="label muted" data-label="Бюджет">${formatMoney(l.budget)}</td>
+          <td class="label" data-label="Статус"><span class="status-pill" style="color:${st.color};background:${st.bg}">${st.label}</span></td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function renderDrawer() {
+    const overlay = document.getElementById("overlay");
+    const drawer = document.getElementById("drawer");
+    const lead = leads.find(l => l.id === state.selectedId);
+
+    if (!lead) {
+      overlay.classList.remove("open");
+      drawer.classList.remove("open");
+      return;
+    }
+
+    const statusButtons = Object.entries(STATUSES).map(([key, st]) => `
+      <button class="status-btn" data-status="${key}" style="${lead.status === key ? `border-color:${st.color};color:${st.color};background:${st.bg}` : ""}">
+        ${st.label}
+      </button>
+    `).join("");
+
+    drawer.innerHTML = `
+      <div class="drawer-head">
+        <div>
+          <p class="eyebrow">Заявка #${String(lead.id).padStart(4, "0")}</p>
+          <h2 class="serif">${esc(lead.client)}</h2>
+        </div>
+        <button class="close-btn" id="close-drawer">✕</button>
+      </div>
+
+      <div class="status-row">${statusButtons}</div>
+
+      <div class="field-row"><span class="lbl">Телефон</span></div>
+      <p class="val" style="margin:-14px 0 18px">${esc(lead.phone)}</p>
+      <p class="lbl">Направление</p><p class="val" style="margin:0 0 18px">${esc(lead.destination)}</p>
+      <p class="lbl">Вылет</p><p class="val" style="margin:0 0 18px">${formatDate(lead.departDate)} из г. ${esc(lead.departureCity)} · ${esc(lead.nights)}</p>
+      <p class="lbl">Бюджет</p><p class="val" style="margin:0 0 18px">${formatMoney(lead.budget)}</p>
+      <p class="lbl">Состав группы</p><p class="val" style="margin:0 0 18px">${esc(lead.group)}</p>
+
+      <div class="section-block">
+        <p class="eyebrow">Проживание</p>
+        <p class="val" style="margin:0 0 6px">Вилла: ${esc(lead.villa)}</p>
+        <p class="val" style="margin:0 0 6px">Питание: ${esc(lead.meal)}</p>
+        <p class="val" style="margin:0">Риф для снорклинга: ${lead.reef ? "нужен" : "не требуется"}</p>
+      </div>
+
+      ${lead.notes ? `
+        <div class="section-block">
+          <p class="eyebrow">Комментарий клиента</p>
+          <p class="val" style="margin:0">${esc(lead.notes)}</p>
+        </div>
+      ` : ""}
+
+      <div class="section-block">
+        <p class="eyebrow">Получена</p>
+        <p class="val" style="margin:0">${formatDateTime(lead.createdAt)}</p>
+      </div>
+    `;
+
+    overlay.classList.add("open");
+    drawer.classList.add("open");
+
+    document.getElementById("close-drawer").addEventListener("click", () => {
+      state.selectedId = null;
+      renderDrawer();
+    });
+    drawer.querySelectorAll(".status-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        lead.status = btn.dataset.status;
+        renderAll();
+        renderDrawer();
+      });
+    });
+  }
+
+  function renderAll() {
+    renderStats();
+    renderFilters();
+    renderTable();
+  }
+
+  document.addEventListener("click", (e) => {
+    const filterBtn = e.target.closest("[data-filter]");
+    if (filterBtn) {
+      state.filter = filterBtn.dataset.filter;
+      renderAll();
+      return;
+    }
+    const row = e.target.closest("tr[data-id]");
+    if (row) {
+      state.selectedId = Number(row.dataset.id);
+      renderDrawer();
+      return;
+    }
+    if (e.target.id === "overlay") {
+      state.selectedId = null;
+      renderDrawer();
+    }
+  });
+
+  document.getElementById("search").addEventListener("input", (e) => {
+    state.query = e.target.value;
+    renderTable();
+  });
+
+  renderAll();
+</script>
+
+</body>
+</html>
