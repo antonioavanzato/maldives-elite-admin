@@ -184,7 +184,7 @@
   }
   .search-box input {
     background: transparent; border: none; outline: none; color: var(--text);
-    font-size: 14px; width: 100%;
+    font-size: 16px; width: 100%; /* минимум 16px, иначе iPhone зумит страницу при фокусе */
   }
   .search-box input::placeholder { color: var(--text-dim); }
   #search-clear {
@@ -324,7 +324,7 @@
   .login-lbl { display: block; text-align: left; font-size: 11px; color: var(--text-muted); margin: 0 0 4px; }
   .login-card input {
     width: 100%; box-sizing: border-box; margin-bottom: 14px;
-    padding: 11px 12px; font-size: 14px; color: var(--text);
+    padding: 11px 12px; font-size: 16px; color: var(--text); /* 16px против авто-зума iPhone */
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px; outline: none;
   }
   .login-card input:focus { border-color: var(--accent); }
@@ -438,7 +438,7 @@
   <div class="controls">
     <div class="search-box">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8FA9AC" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input id="search" type="text" placeholder="Поиск по имени, телефону, дате, направлению">
+      <input id="search" type="text" placeholder="Поиск по имени, телефону, дате">
       <button id="search-clear" type="button" aria-label="Очистить поиск">✕</button>
     </div>
     <div class="filter-chips" id="filters"></div>
