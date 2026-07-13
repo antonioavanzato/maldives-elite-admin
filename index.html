@@ -270,16 +270,10 @@
   .contact-btn svg { width: 20px; height: 20px; }
 
   .primary-actions { display: flex; gap: 10px; margin-bottom: 24px; }
-  .action-confirm, .action-delete {
+  .action-delete {
     flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
     padding: 12px 14px; border-radius: 10px; font-size: 13px; font-weight: 500;
     cursor: pointer;
-  }
-  .action-confirm {
-    border: none; background: var(--st-confirmed); color: #fff;
-  }
-  .action-confirm:disabled { opacity: 0.5; cursor: default; }
-  .action-delete {
     border: 1px solid var(--danger); background: transparent; color: var(--danger);
   }
   .action-delete:active { background: var(--danger-bg); }
@@ -498,13 +492,9 @@
       </div>
 
       <div class="primary-actions">
-        <button class="action-confirm" id="btn-confirm" ${lead.status === "confirmed" ? "disabled" : ""}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          ${lead.status === "confirmed" ? "Подтверждена" : "Подтвердить"}
-        </button>
         <button class="action-delete" id="btn-delete">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          Удалить
+          Удалить заявку
         </button>
       </div>
 
@@ -551,13 +541,6 @@
         renderAll();
         renderDrawer();
       });
-    });
-
-    document.getElementById("btn-confirm").addEventListener("click", () => {
-      lead.status = "confirmed";
-      triggerSync();
-      renderAll();
-      renderDrawer();
     });
 
     document.getElementById("btn-delete").addEventListener("click", () => {
