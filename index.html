@@ -306,6 +306,35 @@
 
   .section-block { border-top: 1px solid var(--border); padding-top: 18px; margin-bottom: 18px; }
 
+  /* Экран входа */
+  .login-screen {
+    position: fixed; inset: 0; z-index: 100; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+    background: var(--bg-1);
+  }
+  .login-screen.open { display: flex; }
+  .login-card {
+    width: 100%; max-width: 360px; text-align: center;
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 32px 26px; box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+  }
+  .login-logo { width: 64px; height: 64px; object-fit: contain; margin-bottom: 12px; }
+  .login-card h2 { margin: 0 0 2px; font-size: 20px; font-weight: 500; }
+  .login-sub { margin: 0 0 22px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .login-lbl { display: block; text-align: left; font-size: 11px; color: var(--text-muted); margin: 0 0 4px; }
+  .login-card input {
+    width: 100%; box-sizing: border-box; margin-bottom: 14px;
+    padding: 11px 12px; font-size: 14px; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; outline: none;
+  }
+  .login-card input:focus { border-color: var(--accent); }
+  .login-error { min-height: 16px; margin: 0 0 10px; font-size: 12px; color: var(--danger); }
+  #login-submit {
+    width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer;
+    background: var(--accent-dark); color: #fff; font-size: 14px; font-weight: 500;
+  }
+  #login-submit:disabled { opacity: 0.6; }
+
   /* Calendar modal */
   .calendar-modal {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.96);
@@ -427,6 +456,20 @@
   <p class="footnote">Заявки поступают автоматически из формы на сайте и дублируются в Telegram-канал. Хранение — Yandex Cloud (подключается отдельно).</p>
 </main>
 
+<div class="login-screen" id="login-screen">
+  <form class="login-card" id="login-form" autocomplete="on">
+    <img class="login-logo" src="images/logo trans.png" alt="Maldives Elite">
+    <h2 class="serif">Панель заявок</h2>
+    <p class="login-sub">Вход для менеджера</p>
+    <label class="login-lbl" for="login-email">Почта</label>
+    <input id="login-email" type="email" name="email" autocomplete="username" required placeholder="you@example.com">
+    <label class="login-lbl" for="login-password">Пароль</label>
+    <input id="login-password" type="password" name="password" autocomplete="current-password" required placeholder="••••••••">
+    <p class="login-error" id="login-error"></p>
+    <button type="submit" id="login-submit">Войти</button>
+  </form>
+</div>
+
 <div class="overlay" id="overlay"></div>
 <div class="overlay" id="cal-overlay"></div>
 <div class="calendar-modal" id="calendar-modal"></div>
@@ -455,27 +498,29 @@
   // например "https://xxxxx.apigw.yandexcloud.net". Пусто = демо-режим на массиве выше.
   const API_BASE = "";
 
-  // Токен доступа менеджера. Запрашивается один раз и хранится на устройстве;
-  // сервер (admin-api) сверяет его с ADMIN_TOKEN из своего окружения.
-  function getAdminToken(forceAsk = false) {
-    let t = localStorage.getItem("adminToken") || "";
-    if (!t || forceAsk) {
-      t = (prompt("Введите код доступа к панели заявок:") || "").trim();
-      if (t) localStorage.setItem("adminToken", t);
-    }
-    return t;
+  // ---- Вход по почте и паролю ----
+  // Токен сессии выдаёт сервер (admin-api, POST /login) после проверки
+  // почты и пароля; хранится на устройстве, чтобы не входить каждый раз.
+
+  function showLogin(errorMsg = "") {
+    document.getElementById("login-error").textContent = errorMsg;
+    document.getElementById("login-screen").classList.add("open");
+    document.getElementById("login-email").focus();
+  }
+  function hideLogin() {
+    document.getElementById("login-screen").classList.remove("open");
   }
 
   async function apiFetch(path, options = {}) {
-    const call = () => fetch(`${API_BASE}${path}`, {
+    const token = localStorage.getItem("adminToken") || "";
+    const r = await fetch(`${API_BASE}${path}`, {
       ...options,
-      headers: { ...(options.headers || {}), Authorization: `Bearer ${getAdminToken()}` },
+      headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
     });
-    let r = await call();
-    if (r.status === 401) { // неверный/устаревший код — спросить заново и повторить
+    if (r.status === 401) { // сессия истекла или токен неверный — снова на вход
       localStorage.removeItem("adminToken");
-      getAdminToken(true);
-      r = await call();
+      showLogin();
+      throw new Error("нужен вход");
     }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r;
@@ -483,6 +528,17 @@
 
   const api = {
     enabled: () => Boolean(API_BASE),
+    async login(email, password) {
+      const r = await fetch(`${API_BASE}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (r.status === 401) throw new Error("Неверная почта или пароль");
+      if (!r.ok) throw new Error(`Сервер недоступен (HTTP ${r.status})`);
+      const { token } = await r.json();
+      localStorage.setItem("adminToken", token);
+    },
     async loadLeads() {
       return (await apiFetch("/leads")).json();
     },
@@ -504,7 +560,7 @@
     try {
       await fn();
     } catch (e) {
-      alert("Ошибка синхронизации с сервером: " + e.message);
+      if (e.message !== "нужен вход") alert("Ошибка синхронизации с сервером: " + e.message);
     } finally {
       setSyncState(false);
     }
@@ -985,12 +1041,36 @@
     document.getElementById("search").focus();
   });
 
-  renderAll();
-  if (api.enabled()) {
-    syncCall(async () => {
+  async function loadFromServer() {
+    await syncCall(async () => {
       leads = await api.loadLeads();
       renderAll();
     });
+  }
+
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("login-submit");
+    btn.disabled = true;
+    document.getElementById("login-error").textContent = "";
+    try {
+      await api.login(
+        document.getElementById("login-email").value.trim().toLowerCase(),
+        document.getElementById("login-password").value
+      );
+      hideLogin();
+      await loadFromServer();
+    } catch (err) {
+      document.getElementById("login-error").textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  renderAll();
+  if (api.enabled()) {
+    if (localStorage.getItem("adminToken")) loadFromServer();
+    else showLogin();
   } else {
     triggerSync(1200);
   }

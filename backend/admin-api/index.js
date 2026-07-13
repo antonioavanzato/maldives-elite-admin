@@ -1,12 +1,37 @@
 /* Yandex Cloud Function: API админки.
+   POST   /login              — вход { email, password } → { token }
    GET    /leads              — список заявок
    PATCH  /leads/{id}/status  — смена статуса { status }
    DELETE /leads/{id}         — удаление заявки
 
-   Доступ по заголовку Authorization: Bearer {ADMIN_TOKEN}.
-   Окружение: YDB_ENDPOINT, YDB_DATABASE, ADMIN_TOKEN. */
+   Вход: почта и пароль менеджера сверяются с ADMIN_EMAIL / ADMIN_PASSWORD_HASH
+   (sha256-хэш пароля, чтобы сам пароль не лежал в настройках открытым текстом).
+   Успешный вход возвращает токен сессии, остальные запросы идут с заголовком
+   Authorization: Bearer {token}.
+
+   Окружение: YDB_ENDPOINT, YDB_DATABASE, ADMIN_EMAIL, ADMIN_PASSWORD_HASH, SESSION_SECRET. */
 
 const { Driver, getCredentialsFromEnv, TypedValues, TypedData } = require("ydb-sdk");
+const { createHash, createHmac, timingSafeEqual } = require("crypto");
+
+const SESSION_DAYS = 90; // сессия живёт 90 дней, потом повторный вход
+
+function makeToken() {
+  const exp = Date.now() + SESSION_DAYS * 24 * 3600 * 1000;
+  const sig = createHmac("sha256", process.env.SESSION_SECRET).update(String(exp)).digest("hex");
+  return `${exp}.${sig}`;
+}
+
+function tokenValid(token) {
+  const [exp, sig] = String(token).split(".");
+  if (!exp || !sig || Date.now() > Number(exp)) return false;
+  const good = createHmac("sha256", process.env.SESSION_SECRET).update(exp).digest("hex");
+  try {
+    return timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(good, "hex"));
+  } catch {
+    return false;
+  }
+}
 
 let driver;
 async function getDriver() {
@@ -23,7 +48,7 @@ async function getDriver() {
 
 const CORS = {
   "Access-Control-Allow-Origin": "*", // сузить до домена админки после деплоя
-  "Access-Control-Allow-Methods": "GET, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 const STATUSES = new Set(["new", "progress", "confirmed", "closed"]);
@@ -56,10 +81,24 @@ function toLead(row) {
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
 
-  const auth = (event.headers && (event.headers.Authorization || event.headers.authorization)) || "";
-  if (auth !== `Bearer ${process.env.ADMIN_TOKEN}`) return resp(401, { error: "unauthorized" });
-
   const path = event.path || event.url || "";
+
+  // Вход по почте и паролю
+  if (event.httpMethod === "POST" && path.endsWith("/login")) {
+    let body;
+    try {
+      body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, "base64").toString() : event.body);
+    } catch { return resp(400, { error: "invalid json" }); }
+    const email = String(body.email || "").trim().toLowerCase();
+    const hash = createHash("sha256").update(String(body.password || "")).digest("hex");
+    if (email !== String(process.env.ADMIN_EMAIL).toLowerCase() || hash !== process.env.ADMIN_PASSWORD_HASH) {
+      return resp(401, { error: "invalid credentials" });
+    }
+    return resp(200, { token: makeToken() });
+  }
+
+  const auth = (event.headers && (event.headers.Authorization || event.headers.authorization)) || "";
+  if (!tokenValid(auth.replace(/^Bearer\s+/i, ""))) return resp(401, { error: "unauthorized" });
   const idMatch = path.match(/\/leads\/([^/]+)/);
   const d = await getDriver();
 

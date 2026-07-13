@@ -28,7 +28,9 @@
 - `YDB_DATABASE` — путь базы, например `/ru-central1/b1g.../etn...`
 - `TG_BOT_TOKEN` — токен бота (только для form-intake)
 - `TG_CHAT_ID` — ID закрытого канала (только для form-intake)
-- `ADMIN_TOKEN` — секрет для доступа админки к admin-api
+- `ADMIN_EMAIL` — почта Марии для входа в админку (только для admin-api)
+- `ADMIN_PASSWORD_HASH` — sha256-хэш её пароля: `echo -n "пароль" | sha256sum`
+- `SESSION_SECRET` — случайная строка для подписи токенов сессий: `openssl rand -hex 32`
 
 Авторизация в YDB — через сервисный аккаунт функции (роль `ydb.editor`),
 ключи в коде не нужны.
