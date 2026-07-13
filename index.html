@@ -71,9 +71,17 @@
     --st-confirmed-bg: rgba(63,156,127,0.12);
     --st-closed: #93A2A9;
     --st-closed-bg: rgba(147,162,169,0.14);
+    --danger: #C4634A;
+    --danger-bg: rgba(196,99,74,0.08);
   }
 
   * { box-sizing: border-box; }
+
+  html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar { display: none; }
 
   body {
     margin: 0;
@@ -179,7 +187,10 @@
     transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
     z-index: 51;
     box-shadow: 0 -8px 30px rgba(0,0,0,0.12);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  .drawer::-webkit-scrollbar { display: none; }
   .drawer.open { transform: translateY(0); }
   .drawer.dragging { transition: none; }
 
@@ -210,6 +221,31 @@
     background: transparent; color: var(--text-muted); cursor: pointer;
   }
   .status-btn.active { }
+
+  .contact-row { display: flex; gap: 10px; margin-bottom: 16px; }
+  .contact-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 5px; padding: 12px 8px; border-radius: 12px; border: none;
+    background: var(--accent); color: #fff; text-decoration: none;
+    font-size: 11px; font-weight: 500; cursor: pointer;
+  }
+  .contact-btn:active { background: var(--accent-dark); }
+  .contact-btn svg { width: 20px; height: 20px; }
+
+  .primary-actions { display: flex; gap: 10px; margin-bottom: 24px; }
+  .action-confirm, .action-delete {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 12px 14px; border-radius: 10px; font-size: 13px; font-weight: 500;
+    cursor: pointer;
+  }
+  .action-confirm {
+    border: none; background: var(--st-confirmed); color: #fff;
+  }
+  .action-confirm:disabled { opacity: 0.5; cursor: default; }
+  .action-delete {
+    border: 1px solid var(--danger); background: transparent; color: var(--danger);
+  }
+  .action-delete:active { background: var(--danger-bg); }
 
   .field-row { display: flex; gap: 12px; margin-bottom: 18px; align-items: flex-start; }
   .field-row .ic { color: var(--gold); margin-top: 2px; flex-shrink: 0; }
@@ -299,6 +335,9 @@
   function formatMoney(n) {
     if (!n) return "—";
     return new Intl.NumberFormat("ru-RU").format(n) + " ₽";
+  }
+  function phoneDigits(phone) {
+    return (phone || "").replace(/[^\d]/g, "");
   }
   function esc(s) {
     const d = document.createElement("div");
@@ -396,6 +435,32 @@
         <button class="close-btn" id="close-drawer">✕</button>
       </div>
 
+      <div class="contact-row">
+        <a class="contact-btn" href="tel:+${phoneDigits(lead.phone)}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          Позвонить
+        </a>
+        <a class="contact-btn" href="https://t.me/+${phoneDigits(lead.phone)}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.05 3.76 2.9 10.9c-1.23.5-1.22 1.2-.22 1.5l4.66 1.45 1.8 5.5c.22.55.4.77.8.77.4 0 .58-.18.8-.4l1.9-1.86 4.02 2.97c.74.4 1.28.2 1.46-.68l2.65-12.5c.28-1.1-.42-1.6-1.72-1.9z"/></svg>
+          Telegram
+        </a>
+        <a class="contact-btn" href="https://wa.me/${phoneDigits(lead.phone)}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.15-1.7-.85-2-.95-.27-.1-.46-.15-.66.15-.2.3-.75.94-.92 1.14-.17.2-.34.22-.63.07-.3-.15-1.24-.46-2.36-1.46-.87-.78-1.46-1.74-1.63-2.04-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.53.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.66-1.6-.9-2.18-.24-.58-.48-.5-.66-.5h-.56c-.2 0-.52.07-.79.37-.27.3-1.04 1-1.04 2.5 0 1.48 1.06 2.9 1.2 3.1.15.2 2.1 3.2 5.1 4.48.71.3 1.27.49 1.7.63.72.23 1.37.2 1.88.12.57-.08 1.7-.7 1.95-1.36.24-.67.24-1.24.17-1.36-.07-.12-.27-.2-.57-.35z"/><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.43-4.4-1.24l-.32-.2-3 .78.8-2.9-.2-.33A8.2 8.2 0 1 1 12 20.2z"/></svg>
+          WhatsApp
+        </a>
+      </div>
+
+      <div class="primary-actions">
+        <button class="action-confirm" id="btn-confirm" ${lead.status === "confirmed" ? "disabled" : ""}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          ${lead.status === "confirmed" ? "Подтверждена" : "Подтвердить"}
+        </button>
+        <button class="action-delete" id="btn-delete">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Удалить
+        </button>
+      </div>
+
       <div class="status-row">${statusButtons}</div>
 
       <div class="field-row"><span class="lbl">Телефон</span></div>
@@ -438,6 +503,21 @@
         renderAll();
         renderDrawer();
       });
+    });
+
+    document.getElementById("btn-confirm").addEventListener("click", () => {
+      lead.status = "confirmed";
+      renderAll();
+      renderDrawer();
+    });
+
+    document.getElementById("btn-delete").addEventListener("click", () => {
+      if (!confirm(`Удалить заявку от ${lead.client}? Это действие нельзя отменить.`)) return;
+      // TODO: когда подключим Yandex Cloud (YDB) — здесь будет DELETE-запрос к API вместо локального filter
+      leads = leads.filter(l => l.id !== lead.id);
+      state.selectedId = null;
+      renderAll();
+      renderDrawer();
     });
 
     setupSwipeToClose(drawer, overlay);
