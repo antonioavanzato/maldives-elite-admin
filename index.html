@@ -124,6 +124,7 @@
   .header-right { display: flex; align-items: center; gap: 12px; }
 
   .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+  #sync-label { display: flex; flex-direction: column; line-height: 1.35; }
   .sync-dot {
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--text-dim);
@@ -846,11 +847,11 @@
     renderTable();
   }
 
-  // Рядом с точкой показываем сегодняшнюю дату (точка мигает во время синхронизации)
+  // Рядом с точкой — «Сегодня» и текущая дата (точка мигает во время синхронизации)
   function renderTodayLabel() {
     const now = new Date();
-    document.getElementById("sync-label").textContent =
-      now.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+    const date = now.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+    document.getElementById("sync-label").innerHTML = `<span>Сегодня</span><span>${date}</span>`;
   }
   renderTodayLabel();
   setInterval(renderTodayLabel, 60 * 1000); // обновляется само после полуночи
