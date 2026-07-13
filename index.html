@@ -455,24 +455,46 @@
   // например "https://xxxxx.apigw.yandexcloud.net". Пусто = демо-режим на массиве выше.
   const API_BASE = "";
 
+  // Токен доступа менеджера. Запрашивается один раз и хранится на устройстве;
+  // сервер (admin-api) сверяет его с ADMIN_TOKEN из своего окружения.
+  function getAdminToken(forceAsk = false) {
+    let t = localStorage.getItem("adminToken") || "";
+    if (!t || forceAsk) {
+      t = (prompt("Введите код доступа к панели заявок:") || "").trim();
+      if (t) localStorage.setItem("adminToken", t);
+    }
+    return t;
+  }
+
+  async function apiFetch(path, options = {}) {
+    const call = () => fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: { ...(options.headers || {}), Authorization: `Bearer ${getAdminToken()}` },
+    });
+    let r = await call();
+    if (r.status === 401) { // неверный/устаревший код — спросить заново и повторить
+      localStorage.removeItem("adminToken");
+      getAdminToken(true);
+      r = await call();
+    }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r;
+  }
+
   const api = {
     enabled: () => Boolean(API_BASE),
     async loadLeads() {
-      const r = await fetch(`${API_BASE}/leads`);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json();
+      return (await apiFetch("/leads")).json();
     },
     async updateStatus(id, status) {
-      const r = await fetch(`${API_BASE}/leads/${encodeURIComponent(id)}/status`, {
+      await apiFetch(`/leads/${encodeURIComponent(id)}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
     },
     async removeLead(id) {
-      const r = await fetch(`${API_BASE}/leads/${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      await apiFetch(`/leads/${encodeURIComponent(id)}`, { method: "DELETE" });
     },
   };
 
@@ -788,9 +810,23 @@
     setTimeout(() => setSyncState(false), duration);
   }
 
-  document.getElementById("bell-btn").addEventListener("click", () => {
-    // TODO: запрос разрешения на push-уведомления при установке как PWA
-    alert("Push-уведомления подключаются в PWA-режиме — появятся при следующем обновлении.");
+  document.getElementById("bell-btn").addEventListener("click", async () => {
+    if (!("Notification" in window)) {
+      alert("Этот браузер не поддерживает уведомления. На iPhone добавьте панель на экран «Домой» через Safari → Поделиться.");
+      return;
+    }
+    if (Notification.permission === "granted") {
+      alert("Уведомления включены ✓\nPush о новых заявках заработает после подключения сервера (Yandex Cloud).");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      alert("Уведомления запрещены в настройках. Разрешите их для этого сайта в настройках браузера/телефона.");
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === "granted") {
+      alert("Готово! Уведомления включены ✓\nPush о новых заявках заработает после подключения сервера (Yandex Cloud).");
+    }
   });
 
   // ---- Календарь заявок ----
