@@ -7,22 +7,26 @@
 <title>Maldives Elite — Панель заявок</title>
 <style>
   :root {
-    --bg-1: #0B2430;
-    --bg-2: #0E2C39;
-    --surface: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.1);
-    --text: #F0EAD9;
-    --text-muted: #8FA9AC;
-    --text-dim: #5f7a7d;
-    --gold: #C9A24B;
-    --st-new: #E08E45;
-    --st-new-bg: rgba(224,142,69,0.12);
-    --st-progress: #5B9BD5;
-    --st-progress-bg: rgba(91,155,213,0.12);
-    --st-confirmed: #3FA796;
-    --st-confirmed-bg: rgba(63,167,150,0.14);
-    --st-closed: #8FA9AC;
-    --st-closed-bg: rgba(143,169,172,0.12);
+    --bg-1: #F3F1EC;
+    --bg-2: #F3F1EC;
+    --card: #FFFFFF;
+    --surface: #FFFFFF;
+    --border: #E3E0D8;
+    --text: #1F2A33;
+    --text-muted: #6B7B84;
+    --text-dim: #98A5AB;
+    --accent: #6FA8C9;
+    --accent-dark: #4C86A8;
+    --sand: #E4C98A;
+    --gold: #4C86A8;
+    --st-new: #D98A3D;
+    --st-new-bg: rgba(217,138,61,0.12);
+    --st-progress: #4C86A8;
+    --st-progress-bg: rgba(76,134,168,0.10);
+    --st-confirmed: #3F9C7F;
+    --st-confirmed-bg: rgba(63,156,127,0.12);
+    --st-closed: #93A2A9;
+    --st-closed-bg: rgba(147,162,169,0.14);
   }
 
   * { box-sizing: border-box; }
@@ -30,7 +34,7 @@
   body {
     margin: 0;
     min-height: 100vh;
-    background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+    background: var(--bg-1);
     color: var(--text);
     font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
@@ -45,6 +49,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    background: var(--card);
   }
 
   .brand { display: flex; align-items: center; gap: 12px; }
@@ -69,7 +74,7 @@
     color: inherit;
     font: inherit;
   }
-  .stat-card.active { border-color: var(--gold); background: rgba(201,162,75,0.08); }
+  .stat-card.active { border-color: var(--accent); background: rgba(76,134,168,0.06); }
   .stat-card .num { font-size: 30px; font-weight: 500; margin: 0; }
   .stat-card .lbl { font-size: 12px; color: var(--text-muted); margin: 4px 0 0; }
 
@@ -91,18 +96,18 @@
     border: 1px solid var(--border); background: transparent; color: var(--text-muted);
     cursor: pointer;
   }
-  .chip.active { border-color: var(--gold); color: var(--gold); }
+  .chip.active { border-color: var(--accent); color: var(--accent-dark); background: rgba(76,134,168,0.06); }
 
-  table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--card); }
   thead th {
     text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--text-muted); background: rgba(255,255,255,0.04);
-    padding: 12px 20px; font-weight: 500;
+    color: var(--text-muted); background: #F7F5F0;
+    padding: 12px 20px; font-weight: 600;
   }
-  tbody tr { border-top: 1px solid rgba(255,255,255,0.07); cursor: pointer; }
-  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody tr { border-top: 1px solid var(--border); cursor: pointer; }
+  tbody tr:hover { background: #FAF9F5; }
   tbody td { padding: 14px 20px; font-size: 14px; }
-  td.muted { color: #B9C7C4; }
+  td.muted { color: var(--text-muted); }
 
   .status-pill { font-size: 12px; padding: 4px 10px; border-radius: 999px; display: inline-block; }
 
@@ -118,10 +123,11 @@
   .overlay.open { display: block; }
   .drawer {
     position: fixed; top: 0; right: 0; bottom: 0; width: 420px; max-width: 100%;
-    background: var(--bg-2); border-left: 1px solid var(--border);
+    background: var(--card); border-left: 1px solid var(--border);
     padding: 28px 24px; overflow-y: auto;
     transform: translateX(100%); transition: transform 0.2s ease;
     z-index: 51;
+    box-shadow: -8px 0 24px rgba(0,0,0,0.06);
   }
   .drawer.open { transform: translateX(0); }
 
@@ -146,7 +152,7 @@
   .field-row .lbl { font-size: 11px; color: var(--text-muted); margin: 0 0 2px; }
   .field-row .val { margin: 0; color: var(--text); }
 
-  .section-block { border-top: 1px solid rgba(255,255,255,0.08); padding-top: 18px; margin-bottom: 18px; }
+  .section-block { border-top: 1px solid var(--border); padding-top: 18px; margin-bottom: 18px; }
   .section-block .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 0 0 10px; }
 
   @media (max-width: 768px) {
@@ -164,7 +170,7 @@
 
 <header>
   <div class="brand">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C9A24B" stroke-width="1.5"><path d="M2 12c2 2 4 2 6 0s4-2 6 0 4 2 6 0M2 18c2 2 4 2 6 0s4-2 6 0 4 2 6 0M2 6c2 2 4 2 6 0s4-2 6 0 4 2 6 0"/></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4C86A8" stroke-width="1.5"><path d="M2 12c2 2 4 2 6 0s4-2 6 0 4 2 6 0M2 18c2 2 4 2 6 0s4-2 6 0 4 2 6 0M2 6c2 2 4 2 6 0s4-2 6 0 4 2 6 0"/></svg>
     <div>
       <h1 class="serif">Maldives Elite</h1>
       <p>Панель заявок · ALGA</p>
