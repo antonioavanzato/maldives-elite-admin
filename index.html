@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#F6F3EC">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="images/icon-192.png">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Maldives Elite">
 <title>Maldives Elite — Панель заявок</title>
 <style>
 
@@ -110,6 +117,7 @@
   }
 
   .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-logo { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
   .brand h1 { font-size: 17px; font-weight: 500; margin: 0; letter-spacing: 0.01em; line-height: 1.2; }
   .brand p { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 1px 0 0; }
 
@@ -367,7 +375,7 @@
 
 <header>
   <div class="brand">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9C8362" stroke-width="1.5"><path d="M2 12c2 2 4 2 6 0s4-2 6 0 4 2 6 0M2 18c2 2 4 2 6 0s4-2 6 0 4 2 6 0M2 6c2 2 4 2 6 0s4-2 6 0 4 2 6 0"/></svg>
+    <img class="brand-logo" src="images/logo trans.png" alt="Maldives Elite">
     <div>
       <h1 class="serif">Maldives Elite</h1>
       <p>Панель заявок · ALGA</p>
@@ -434,6 +442,44 @@
 
   let state = { query: "", filter: "all", selectedId: null };
 
+  // ---- Слой API (Yandex Cloud) ----
+  // Когда появится аккаунт заказчика, сюда встанет URL API Gateway,
+  // например "https://xxxxx.apigw.yandexcloud.net". Пусто = демо-режим на массиве выше.
+  const API_BASE = "";
+
+  const api = {
+    enabled: () => Boolean(API_BASE),
+    async loadLeads() {
+      const r = await fetch(`${API_BASE}/leads`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    },
+    async updateStatus(id, status) {
+      const r = await fetch(`${API_BASE}/leads/${encodeURIComponent(id)}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    },
+    async removeLead(id) {
+      const r = await fetch(`${API_BASE}/leads/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    },
+  };
+
+  // Выполняет запрос к API, показывая индикатор синхронизации.
+  async function syncCall(fn) {
+    setSyncState(true);
+    try {
+      await fn();
+    } catch (e) {
+      alert("Ошибка синхронизации с сервером: " + e.message);
+    } finally {
+      setSyncState(false);
+    }
+  }
+
   function formatDate(iso) {
     if (!iso) return "—";
     const d = new Date(iso);
@@ -467,9 +513,10 @@
     const d = new Date(l.departDate);
     const shortDate = formatDate(l.departDate); // "14 сент"
     const longDate = isNaN(d) ? "" : d.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" }); // "14 сентября 2026"
+    const numDate = isNaN(d) ? "" : d.toLocaleDateString("ru-RU"); // "14.09.2026"
     return [
       l.client, l.phone, l.destination, l.departureCity, l.group, l.villa, l.meal,
-      l.nights, l.departDate, shortDate, longDate
+      l.nights, l.departDate, shortDate, longDate, numDate
     ].join(" ").toLowerCase();
   }
 
@@ -618,7 +665,8 @@
     drawer.querySelectorAll(".status-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         lead.status = btn.dataset.status;
-        triggerSync();
+        if (api.enabled()) syncCall(() => api.updateStatus(lead.id, lead.status));
+        else triggerSync();
         renderAll();
         renderDrawer();
       });
@@ -626,10 +674,10 @@
 
     document.getElementById("btn-delete").addEventListener("click", () => {
       if (!confirm(`Удалить заявку от ${lead.client}? Это действие нельзя отменить.`)) return;
-      // TODO: когда подключим Yandex Cloud (YDB) — здесь будет DELETE-запрос к API вместо локального filter
       leads = leads.filter(l => l.id !== lead.id);
       state.selectedId = null;
-      triggerSync();
+      if (api.enabled()) syncCall(() => api.removeLead(lead.id));
+      else triggerSync();
       renderAll();
       renderDrawer();
     });
@@ -726,9 +774,8 @@
     }
   }
 
+  // Имитация синхронизации для демо-режима (без API)
   function triggerSync(duration = 700) {
-    // TODO: когда подключим Yandex Cloud (YDB) — здесь будет реальный запрос,
-    // а точка будет гореть зелёным, пока ответ не пришёл от сервера
     setSyncState(true);
     setTimeout(() => setSyncState(false), duration);
   }
@@ -808,7 +855,7 @@
         const day = el.dataset.day;
         const mm = String(calView.month + 1).padStart(2, "0");
         const dd = String(day).padStart(2, "0");
-        state.query = `${calView.year}-${mm}-${dd}`;
+        state.query = `${dd}.${mm}.${calView.year}`;
         document.getElementById("search").value = state.query;
         state.filter = "all";
         closeCalendar();
@@ -882,7 +929,19 @@
   });
 
   renderAll();
-  triggerSync(1200);
+  if (api.enabled()) {
+    syncCall(async () => {
+      leads = await api.loadLeads();
+      renderAll();
+    });
+  } else {
+    triggerSync(1200);
+  }
+
+  // PWA: service worker (не работает при открытии файла напрямую, только по http/https)
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
 </script>
 
 </body>
