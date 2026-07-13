@@ -420,7 +420,7 @@
   <div class="header-right">
     <div class="sync-indicator">
       <span class="sync-dot" id="sync-dot"></span>
-      <span id="sync-label">Синхронизировано</span>
+      <span id="sync-label"></span>
     </div>
     <button class="bell-btn" id="calendar-btn" aria-label="Календарь заявок">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
@@ -848,16 +848,17 @@
     renderTable();
   }
 
+  // Рядом с точкой показываем сегодняшнюю дату (точка мигает во время синхронизации)
+  function renderTodayLabel() {
+    const now = new Date();
+    document.getElementById("sync-label").textContent =
+      now.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+  }
+  renderTodayLabel();
+  setInterval(renderTodayLabel, 60 * 1000); // обновляется само после полуночи
+
   function setSyncState(syncing) {
-    const dot = document.getElementById("sync-dot");
-    const label = document.getElementById("sync-label");
-    if (syncing) {
-      dot.classList.add("syncing");
-      label.textContent = "Синхронизация...";
-    } else {
-      dot.classList.remove("syncing");
-      label.textContent = "Синхронизировано";
-    }
+    document.getElementById("sync-dot").classList.toggle("syncing", syncing);
   }
 
   // Имитация синхронизации для демо-режима (без API)
