@@ -273,12 +273,12 @@
   }
   .close-btn:hover { color: var(--text); }
 
-  .status-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  .status-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px; }
   .status-btn {
-    font-size: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+    font-size: 12px; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--border);
     background: transparent; color: var(--text-muted); cursor: pointer;
+    text-align: center; white-space: nowrap;
   }
-  .status-btn.active { }
 
   .contact-row { display: flex; gap: 10px; margin-bottom: 16px; }
   .contact-btn {
