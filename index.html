@@ -468,9 +468,10 @@
     const d = new Date(l.departDate);
     const shortDate = formatDate(l.departDate); // "14 сент"
     const longDate = isNaN(d) ? "" : d.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" }); // "14 сентября 2026"
+    const numDate = isNaN(d) ? "" : d.toLocaleDateString("ru-RU"); // "14.09.2026"
     return [
       l.client, l.phone, l.destination, l.departureCity, l.group, l.villa, l.meal,
-      l.nights, l.departDate, shortDate, longDate
+      l.nights, l.departDate, shortDate, longDate, numDate
     ].join(" ").toLowerCase();
   }
 
@@ -809,7 +810,7 @@
         const day = el.dataset.day;
         const mm = String(calView.month + 1).padStart(2, "0");
         const dd = String(day).padStart(2, "0");
-        state.query = `${calView.year}-${mm}-${dd}`;
+        state.query = `${dd}.${mm}.${calView.year}`;
         document.getElementById("search").value = state.query;
         state.filter = "all";
         closeCalendar();
