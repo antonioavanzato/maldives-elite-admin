@@ -180,11 +180,17 @@
   }
   .search-box input::placeholder { color: var(--text-dim); }
 
-  .filter-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filter-chips {
+    display: flex; gap: 8px; flex-wrap: nowrap;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; -ms-overflow-style: none;
+    padding-bottom: 2px;
+  }
+  .filter-chips::-webkit-scrollbar { display: none; }
   .chip {
     font-size: 12px; padding: 8px 14px; border-radius: 6px;
     border: 1px solid var(--border); background: transparent; color: var(--text-muted);
-    cursor: pointer;
+    cursor: pointer; white-space: nowrap; flex-shrink: 0;
   }
   .chip.active { border-color: var(--accent); color: var(--accent-dark); background: rgba(76,134,168,0.06); }
 
@@ -284,6 +290,59 @@
   .field-row .val { margin: 0; color: var(--text); }
 
   .section-block { border-top: 1px solid var(--border); padding-top: 18px; margin-bottom: 18px; }
+
+  /* Calendar modal */
+  .calendar-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.96);
+    width: calc(100% - 32px); max-width: 380px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px; z-index: 61; box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+    display: none; opacity: 0;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .calendar-modal.open { display: block; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #cal-overlay { z-index: 60; }
+
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .cal-head .cal-title { font-size: 15px; font-weight: 500; text-transform: capitalize; }
+  .cal-nav-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-nav-btn:active { background: rgba(180,154,118,0.08); }
+  .cal-close {
+    position: absolute; top: 14px; right: 14px;
+    background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px;
+  }
+
+  .cal-weekdays, .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+  }
+  .cal-weekdays div {
+    text-align: center; font-size: 10px; text-transform: uppercase; color: var(--text-dim);
+    padding-bottom: 8px;
+  }
+  .cal-day {
+    aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; border-radius: 10px; cursor: default; position: relative;
+    font-size: 13px; color: var(--text);
+  }
+  .cal-day.empty { visibility: hidden; }
+  .cal-day.has-leads { cursor: pointer; }
+  .cal-day.has-leads:active { background: rgba(180,154,118,0.1); }
+  .cal-day.today { font-weight: 600; }
+  .cal-day.today::before {
+    content: ""; position: absolute; top: 2px; right: 2px; width: 5px; height: 5px;
+    border-radius: 50%; background: var(--accent);
+  }
+  .cal-dots { display: flex; gap: 2px; height: 5px; }
+  .cal-dots span { width: 5px; height: 5px; border-radius: 50%; }
+
+  .cal-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .cal-legend .item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); }
+  .cal-legend .item span { width: 7px; height: 7px; border-radius: 50%; }
+
   .section-block .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 0 0 10px; }
 
   @media (max-width: 768px) {
@@ -312,6 +371,9 @@
       <span class="sync-dot" id="sync-dot"></span>
       <span id="sync-label">Синхронизировано</span>
     </div>
+    <button class="bell-btn" id="calendar-btn" aria-label="Календарь заявок">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    </button>
     <button class="bell-btn" id="bell-btn" aria-label="Уведомления">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span class="dot"></span>
@@ -325,7 +387,7 @@
   <div class="controls">
     <div class="search-box">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8FA9AC" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input id="search" type="text" placeholder="Поиск по имени, телефону, направлению">
+      <input id="search" type="text" placeholder="Поиск по имени, телефону, дате, направлению">
     </div>
     <div class="filter-chips" id="filters"></div>
   </div>
@@ -343,6 +405,8 @@
 </main>
 
 <div class="overlay" id="overlay"></div>
+<div class="overlay" id="cal-overlay"></div>
+<div class="calendar-modal" id="calendar-modal"></div>
 <div class="drawer" id="drawer"></div>
 
 <script>
@@ -392,11 +456,21 @@
     return c;
   }
 
+  function leadSearchIndex(l) {
+    const d = new Date(l.departDate);
+    const shortDate = formatDate(l.departDate); // "14 сент"
+    const longDate = isNaN(d) ? "" : d.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" }); // "14 сентября 2026"
+    return [
+      l.client, l.phone, l.destination, l.departureCity, l.group, l.villa, l.meal,
+      l.nights, l.departDate, shortDate, longDate
+    ].join(" ").toLowerCase();
+  }
+
   function getFiltered() {
     const q = state.query.trim().toLowerCase();
     return leads
       .filter(l => state.filter === "all" || l.status === state.filter)
-      .filter(l => !q || l.client.toLowerCase().includes(q) || l.phone.toLowerCase().includes(q) || l.destination.toLowerCase().includes(q))
+      .filter(l => !q || leadSearchIndex(l).includes(q))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
@@ -656,6 +730,107 @@
     // TODO: запрос разрешения на push-уведомления при установке как PWA
     alert("Push-уведомления подключаются в PWA-режиме — появятся при следующем обновлении.");
   });
+
+  // ---- Календарь заявок ----
+  const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  const today = new Date();
+  let calView = { year: today.getFullYear(), month: today.getMonth() };
+
+  function isoDay(date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function leadsByDay(year, month) {
+    const map = {};
+    leads.forEach(l => {
+      if (!l.departDate) return;
+      const d = new Date(l.departDate);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate();
+        (map[day] = map[day] || []).push(l);
+      }
+    });
+    return map;
+  }
+
+  function renderCalendar() {
+    const { year, month } = calView;
+    const monthLabel = new Date(year, month, 1).toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+    const firstDay = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const leadingBlanks = (firstDay.getDay() + 6) % 7; // понедельник = 0
+    const byDay = leadsByDay(year, month);
+    const isTodayMonth = today.getFullYear() === year && today.getMonth() === month;
+
+    let cells = "";
+    for (let i = 0; i < leadingBlanks; i++) cells += `<div class="cal-day empty"></div>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayLeads = byDay[day] || [];
+      const isToday = isTodayMonth && today.getDate() === day;
+      const dots = dayLeads.map(l => `<span style="background:${STATUSES[l.status].color}"></span>`).join("");
+      cells += `
+        <div class="cal-day ${dayLeads.length ? "has-leads" : ""} ${isToday ? "today" : ""}" data-day="${day}">
+          <span>${day}</span>
+          <div class="cal-dots">${dots}</div>
+        </div>
+      `;
+    }
+
+    const legend = Object.entries(STATUSES).map(([key, st]) => `
+      <div class="item"><span style="background:${st.color}"></span>${st.label}</div>
+    `).join("");
+
+    const modal = document.getElementById("calendar-modal");
+    modal.innerHTML = `
+      <button class="cal-close" id="cal-close">✕</button>
+      <div class="cal-head">
+        <button class="cal-nav-btn" id="cal-prev">‹</button>
+        <span class="cal-title serif">${monthLabel}</span>
+        <button class="cal-nav-btn" id="cal-next">›</button>
+      </div>
+      <div class="cal-weekdays">${WEEKDAYS.map(w => `<div>${w}</div>`).join("")}</div>
+      <div class="cal-grid">${cells}</div>
+      <div class="cal-legend">${legend}</div>
+    `;
+
+    document.getElementById("cal-close").addEventListener("click", closeCalendar);
+    document.getElementById("cal-prev").addEventListener("click", () => {
+      calView.month--;
+      if (calView.month < 0) { calView.month = 11; calView.year--; }
+      renderCalendar();
+    });
+    document.getElementById("cal-next").addEventListener("click", () => {
+      calView.month++;
+      if (calView.month > 11) { calView.month = 0; calView.year++; }
+      renderCalendar();
+    });
+    modal.querySelectorAll(".cal-day.has-leads").forEach(el => {
+      el.addEventListener("click", () => {
+        const day = el.dataset.day;
+        const mm = String(calView.month + 1).padStart(2, "0");
+        const dd = String(day).padStart(2, "0");
+        state.query = `${calView.year}-${mm}-${dd}`;
+        document.getElementById("search").value = state.query;
+        state.filter = "all";
+        closeCalendar();
+        renderAll();
+      });
+    });
+  }
+
+  function openCalendar() {
+    calView = { year: today.getFullYear(), month: today.getMonth() };
+    renderCalendar();
+    document.getElementById("cal-overlay").classList.add("open");
+    document.getElementById("calendar-modal").classList.add("open");
+  }
+  function closeCalendar() {
+    document.getElementById("cal-overlay").classList.remove("open");
+    document.getElementById("calendar-modal").classList.remove("open");
+  }
+
+  document.getElementById("calendar-btn").addEventListener("click", openCalendar);
+  document.getElementById("cal-overlay").addEventListener("click", closeCalendar);
 
   document.addEventListener("click", (e) => {
     const filterBtn = e.target.closest("[data-filter]");
