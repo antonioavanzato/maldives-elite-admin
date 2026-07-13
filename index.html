@@ -187,6 +187,13 @@
     font-size: 14px; width: 100%;
   }
   .search-box input::placeholder { color: var(--text-dim); }
+  #search-clear {
+    display: none; flex-shrink: 0; width: 22px; height: 22px;
+    align-items: center; justify-content: center;
+    border: none; border-radius: 50%; cursor: pointer;
+    background: rgba(180,154,118,0.14); color: var(--text-muted); font-size: 11px; line-height: 1;
+  }
+  .search-box.has-value #search-clear { display: flex; }
 
   .filter-chips {
     display: flex; gap: 8px; flex-wrap: nowrap;
@@ -378,7 +385,7 @@
     <img class="brand-logo" src="images/logo trans.png" alt="Maldives Elite">
     <div>
       <h1 class="serif">Maldives Elite</h1>
-      <p>Панель заявок · ALGA</p>
+      <p>Панель заявок</p>
     </div>
   </div>
   <div class="header-right">
@@ -403,6 +410,7 @@
     <div class="search-box">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8FA9AC" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
       <input id="search" type="text" placeholder="Поиск по имени, телефону, дате, направлению">
+      <button id="search-clear" type="button" aria-label="Очистить поиск">✕</button>
     </div>
     <div class="filter-chips" id="filters"></div>
   </div>
@@ -855,8 +863,7 @@
         const day = el.dataset.day;
         const mm = String(calView.month + 1).padStart(2, "0");
         const dd = String(day).padStart(2, "0");
-        state.query = `${dd}.${mm}.${calView.year}`;
-        document.getElementById("search").value = state.query;
+        setSearchQuery(`${dd}.${mm}.${calView.year}`);
         state.filter = "all";
         closeCalendar();
         renderAll();
@@ -923,9 +930,23 @@
     }
   });
 
+  // Устанавливает запрос поиска, показывая/скрывая крестик очистки
+  function setSearchQuery(q) {
+    state.query = q;
+    const input = document.getElementById("search");
+    input.value = q;
+    input.closest(".search-box").classList.toggle("has-value", Boolean(q));
+  }
+
   document.getElementById("search").addEventListener("input", (e) => {
-    state.query = e.target.value;
+    setSearchQuery(e.target.value);
     renderTable();
+  });
+
+  document.getElementById("search-clear").addEventListener("click", () => {
+    setSearchQuery("");
+    renderTable();
+    document.getElementById("search").focus();
   });
 
   renderAll();
