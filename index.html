@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#F6F3EC">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="images/icon-192.png">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Maldives Elite">
 <title>Maldives Elite — Панель заявок</title>
 <style>
 
@@ -435,6 +442,44 @@
 
   let state = { query: "", filter: "all", selectedId: null };
 
+  // ---- Слой API (Yandex Cloud) ----
+  // Когда появится аккаунт заказчика, сюда встанет URL API Gateway,
+  // например "https://xxxxx.apigw.yandexcloud.net". Пусто = демо-режим на массиве выше.
+  const API_BASE = "";
+
+  const api = {
+    enabled: () => Boolean(API_BASE),
+    async loadLeads() {
+      const r = await fetch(`${API_BASE}/leads`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    },
+    async updateStatus(id, status) {
+      const r = await fetch(`${API_BASE}/leads/${encodeURIComponent(id)}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    },
+    async removeLead(id) {
+      const r = await fetch(`${API_BASE}/leads/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    },
+  };
+
+  // Выполняет запрос к API, показывая индикатор синхронизации.
+  async function syncCall(fn) {
+    setSyncState(true);
+    try {
+      await fn();
+    } catch (e) {
+      alert("Ошибка синхронизации с сервером: " + e.message);
+    } finally {
+      setSyncState(false);
+    }
+  }
+
   function formatDate(iso) {
     if (!iso) return "—";
     const d = new Date(iso);
@@ -620,7 +665,8 @@
     drawer.querySelectorAll(".status-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         lead.status = btn.dataset.status;
-        triggerSync();
+        if (api.enabled()) syncCall(() => api.updateStatus(lead.id, lead.status));
+        else triggerSync();
         renderAll();
         renderDrawer();
       });
@@ -628,10 +674,10 @@
 
     document.getElementById("btn-delete").addEventListener("click", () => {
       if (!confirm(`Удалить заявку от ${lead.client}? Это действие нельзя отменить.`)) return;
-      // TODO: когда подключим Yandex Cloud (YDB) — здесь будет DELETE-запрос к API вместо локального filter
       leads = leads.filter(l => l.id !== lead.id);
       state.selectedId = null;
-      triggerSync();
+      if (api.enabled()) syncCall(() => api.removeLead(lead.id));
+      else triggerSync();
       renderAll();
       renderDrawer();
     });
@@ -728,9 +774,8 @@
     }
   }
 
+  // Имитация синхронизации для демо-режима (без API)
   function triggerSync(duration = 700) {
-    // TODO: когда подключим Yandex Cloud (YDB) — здесь будет реальный запрос,
-    // а точка будет гореть зелёным, пока ответ не пришёл от сервера
     setSyncState(true);
     setTimeout(() => setSyncState(false), duration);
   }
@@ -884,7 +929,19 @@
   });
 
   renderAll();
-  triggerSync(1200);
+  if (api.enabled()) {
+    syncCall(async () => {
+      leads = await api.loadLeads();
+      renderAll();
+    });
+  } else {
+    triggerSync(1200);
+  }
+
+  // PWA: service worker (не работает при открытии файла напрямую, только по http/https)
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
 </script>
 
 </body>

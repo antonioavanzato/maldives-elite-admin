@@ -1,0 +1,5 @@
+{
+  "name": "admin-api",
+  "version": "1.0.0",
+  "dependencies": { "ydb-sdk": "^5.9.0" }
+}
