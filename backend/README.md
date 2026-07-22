@@ -1,45 +1,58 @@
-# Бэкенд Maldives Elite (Yandex Cloud) — заготовка
+# Бэкенд Maldives Elite (Yandex Cloud)
 
-Архитектура (включаем, когда появится аккаунт заказчика):
+Архитектура:
 
 ```
-Форма на сайте ──POST──▶ API Gateway ──▶ функция form-intake ──▶ YDB (все данные)
-                                              │
-                                              └──▶ Telegram-канал (только имя, без перс. данных)
+Форма /anketa ──POST /submit──▶ API Gateway ──▶ form-intake ──┬─▶ YDB (все данные)
+                                                              ├─▶ Telegram-канал (только имя)
+                                                              └─▶ Web Push (только имя)
 
-Админка (PWA) ──GET/PATCH/DELETE──▶ API Gateway ──▶ функция admin-api ──▶ YDB
+Админка (PWA) ──/login, /leads, /push/subscribe──▶ API Gateway ──▶ admin-api ──▶ YDB
 ```
 
 Персональные данные (телефон, детали заявки) хранятся только в YDB (дата-центры
-Яндекса, РФ — требования 152-ФЗ соблюдены). В Telegram уходит дублирующее
-уведомление без персональных данных: «Новая заявка: Имя».
+Яндекса, РФ — требования 152-ФЗ соблюдены). В Telegram и в push уходит
+дублирующее уведомление без персональных данных: «Новая заявка: Имя».
 
 ## Состав
 
 | Файл | Назначение |
 |---|---|
-| `schema.sql` | Таблица `leads` в YDB |
-| `form-intake/index.js` | Функция приёма формы: валидация → запись в YDB → уведомление в Telegram |
-| `admin-api/index.js` | API для админки: список заявок, смена статуса, удаление |
+| `schema.sql` | Таблицы `leads` и `push_subs` в YDB |
+| `form-intake/index.js` | Приём формы: валидация → запись в YDB → Telegram + Web Push |
+| `admin-api/index.js` | API админки: логин, список, статус, удаление, `/push/subscribe` |
+| `api-gateway.yaml` | Спецификация API Gateway (заменить ID перед загрузкой) |
+| `build-functions.sh` | Сборка ZIP-архивов функций → `dist/` |
+
+> Полная пошаговая инструкция по развёртыванию — в папке `deploy/` в корне
+> репозитория (`НАЧНИ-ОТСЮДА.md` — простая версия, `ИНСТРУКЦИЯ-ДЕПЛОЙ.md` — подробная).
 
 ## Переменные окружения функций (задаются в консоли Яндекса, НЕ в коде)
 
+**form-intake:**
 - `YDB_ENDPOINT` — например `grpcs://ydb.serverless.yandexcloud.net:2135`
 - `YDB_DATABASE` — путь базы, например `/ru-central1/b1g.../etn...`
-- `TG_BOT_TOKEN` — токен бота (только для form-intake)
-- `TG_CHAT_ID` — ID закрытого канала (только для form-intake)
-- `ADMIN_EMAIL` — почта Марии для входа в админку (только для admin-api)
-- `ADMIN_PASSWORD_HASH` — sha256-хэш её пароля: `echo -n "пароль" | sha256sum`
-- `SESSION_SECRET` — случайная строка для подписи токенов сессий: `openssl rand -hex 32`
+- `TG_BOT_TOKEN` — токен бота
+- `TG_CHAT_ID` — ID закрытого канала
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — для Web Push
+  (необязательно; без них push просто не шлётся). Генерация: `npx web-push generate-vapid-keys`
+
+**admin-api:**
+- `YDB_ENDPOINT`, `YDB_DATABASE` — те же
+- `ADMIN_EMAIL` — почта для входа в админку
+- `ADMIN_PASSWORD_HASH` — sha256-хэш пароля: `printf '%s' "пароль" | shasum -a 256 | awk '{print $1}'`
+- `SESSION_SECRET` — случайная строка для подписи сессий: `openssl rand -hex 32`
 
 Авторизация в YDB — через сервисный аккаунт функции (роль `ydb.editor`),
 ключи в коде не нужны.
 
-## Шаги подключения (когда будет аккаунт)
+## Кратко о развёртывании
 
-1. Создать каталог, сервисный аккаунт с ролью `ydb.editor`.
-2. Создать Serverless YDB, выполнить `schema.sql`.
-3. Задеплоить обе функции (runtime nodejs18+), окружение — из списка выше.
-4. Создать API Gateway: `POST /submit` → form-intake; `/leads*` → admin-api.
-5. В `index.html` прописать `API_BASE` = URL гейтвея.
-6. Форму на сайте перенаправить с VPS Beget на `POST {gateway}/submit`.
+1. Сервисный аккаунт с ролями `ydb.editor`, `functions.functionInvoker`.
+2. Serverless YDB → выполнить `schema.sql`.
+3. `bash build-functions.sh` → задеплоить обе функции (nodejs18+), окружение — выше.
+4. В `api-gateway.yaml` подставить ID функций и сервисного аккаунта → создать API Gateway.
+5. В `index.html` админки прописать `API_BASE` = URL шлюза; разместить админку на HTTPS.
+6. Форму `/anketa` перенаправить на `POST {gateway}/submit` (см. `deploy/ФОРМА-АНКЕТА.md`).
+
+Подробности каждого шага — в `deploy/`.

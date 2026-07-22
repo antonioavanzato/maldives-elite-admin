@@ -102,6 +102,32 @@ exports.handler = async (event) => {
   const idMatch = path.match(/\/leads\/([^/]+)/);
   const d = await getDriver();
 
+  // Регистрация push-подписки устройства (после разрешения уведомлений в админке).
+  // Тело: { endpoint, keys: { p256dh, auth } } — стандартный PushSubscription.
+  if (event.httpMethod === "POST" && path.endsWith("/push/subscribe")) {
+    let body;
+    try {
+      body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, "base64").toString() : event.body);
+    } catch { return resp(400, { error: "invalid json" }); }
+    const endpoint = String((body && body.endpoint) || "");
+    const keys = (body && body.keys) || {};
+    if (!endpoint || !keys.p256dh || !keys.auth) return resp(400, { error: "invalid subscription" });
+
+    await d.tableClient.withSession(async (session) => {
+      await session.executeQuery(
+        `DECLARE $e AS Utf8; DECLARE $p AS Utf8; DECLARE $a AS Utf8;
+         UPSERT INTO push_subs (endpoint, p256dh, auth, created_at)
+         VALUES ($e, $p, $a, CurrentUtcTimestamp());`,
+        {
+          $e: TypedValues.utf8(endpoint),
+          $p: TypedValues.utf8(String(keys.p256dh)),
+          $a: TypedValues.utf8(String(keys.auth)),
+        }
+      );
+    });
+    return resp(200, { ok: true });
+  }
+
   if (event.httpMethod === "GET") {
     let rows = [];
     await d.tableClient.withSession(async (session) => {
