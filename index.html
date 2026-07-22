@@ -386,11 +386,18 @@
   .cal-day.empty { visibility: hidden; }
   .cal-day.has-leads { cursor: pointer; }
   .cal-day.has-leads:active { background: rgba(180,154,118,0.1); }
-  .cal-day.today { font-weight: 600; }
-  .cal-day.today::before {
-    content: ""; position: absolute; top: 2px; right: 2px; width: 5px; height: 5px;
-    border-radius: 50%; background: var(--accent);
-  }
+  .cal-day.today > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
   .cal-dots {
     position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
     display: flex; justify-content: center; gap: 2px; height: 5px; max-width: 90%; overflow: hidden;
