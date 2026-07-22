@@ -494,18 +494,15 @@
   };
 
   // Демо-данные. В боевой версии массив leads будет приходить из API (Yandex Cloud).
-  let leads = [
-    { id: 1, client: "Анастасия Волкова", phone: "+7 917 234-56-01", destination: "Мальдивы", departureCity: "Москва", departDate: "2026-09-14", nights: "8 ночей", budget: 1200000, group: "Пара (2 взрослых)", villa: "Над водой", meal: "Все включено (All Inclusive)", reef: true, notes: "Годовщина свадьбы, нужен романтический ужин на пляже", status: "new", createdAt: "2026-07-11T09:12:00" },
-    { id: 2, client: "Дмитрий и Ольга Реутовы", phone: "+7 903 445-12-90", destination: "Мальдивы", departureCity: "Санкт-Петербург", departDate: "2026-08-02", nights: "10 ночей", budget: 2500000, group: "Семья с детьми", villa: "На пляже (пляжный фронт)", meal: "Все включено (All Inclusive)", reef: false, notes: "Требуется детский клуб на территории", status: "progress", createdAt: "2026-07-10T18:40:00" },
-    { id: 3, client: "Марат Хабибуллин", phone: "+7 927 118-77-03", destination: "Маврикий", departureCity: "Казань", departDate: "2026-11-20", nights: "7 ночей", budget: 1800000, group: "Компания друзей", villa: "Не важно", meal: "Полупансион (завтрак + ужин)", reef: true, notes: "", status: "confirmed", createdAt: "2026-07-09T14:05:00" },
-    { id: 4, client: "Елена Северова", phone: "+7 985 662-30-18", destination: "Мальдивы", departureCity: "Москва", departDate: "2026-10-05", nights: "7 ночей", budget: 1500000, group: "Пара (2 взрослых)", villa: "Над водой", meal: "Не важно", reef: true, notes: "Спрашивала про трансфер на гидросамолёте", status: "new", createdAt: "2026-07-11T07:22:00" },
-  ];
+  // Заявки подгружаются с сервера (admin-api). Пустой массив — стартовое
+  // состояние до загрузки и для демо-режима без сервера (API_BASE = "").
+  let leads = [];
 
   let state = { query: "", filter: "all", selectedId: null };
 
   // ---- Слой API (Yandex Cloud) ----
   // Когда появится аккаунт заказчика, сюда встанет URL API Gateway,
-  // например "https://xxxxx.apigw.yandexcloud.net". Пусто = демо-режим на массиве выше.
+  // например "https://xxxxx.apigw.yandexcloud.net". Пусто = демо-режим (пустой список).
   const API_BASE = "";
 
   // ---- Push-уведомления (Web Push) ----
