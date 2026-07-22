@@ -508,6 +508,52 @@
   // например "https://xxxxx.apigw.yandexcloud.net". Пусто = демо-режим на массиве выше.
   const API_BASE = "";
 
+  // ---- Push-уведомления (Web Push) ----
+  // Публичный VAPID-ключ. Сгенерировать: npx web-push generate-vapid-keys
+  // Тот же ключ должен стоять в переменной VAPID_PUBLIC_KEY функции form-intake.
+  // Пусто = push отключён (всё остальное работает).
+  const VAPID_PUBLIC_KEY = "";
+
+  function urlB64ToUint8Array(base64) {
+    const pad = "=".repeat((4 - (base64.length % 4)) % 4);
+    const b64 = (base64 + pad).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(b64);
+    return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+  }
+
+  // Подписаться на push и отправить подписку на сервер (apiFetch добавит токен).
+  async function subscribeToPush() {
+    if (!API_BASE || !VAPID_PUBLIC_KEY) return false;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
+      await apiFetch("/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub),
+      });
+      return true;
+    } catch (err) {
+      console.error("push subscribe failed:", err);
+      return false;
+    }
+  }
+
+  // Тихо переподписаться, если уведомления уже разрешены (вызывается после входа).
+  function maybeAutoSubscribePush() {
+    if (!API_BASE || !VAPID_PUBLIC_KEY) return;
+    if ("Notification" in window && Notification.permission === "granted") {
+      setTimeout(() => subscribeToPush(), 1200);
+    }
+  }
+
   // ---- Вход по почте и паролю ----
   // Токен сессии выдаёт сервер (admin-api, POST /login) после проверки
   // почты и пароля; хранится на устройстве, чтобы не входить каждый раз.
@@ -890,21 +936,25 @@
 
   document.getElementById("bell-btn").addEventListener("click", async () => {
     if (!("Notification" in window)) {
-      alert("Этот браузер не поддерживает уведомления. На iPhone добавьте панель на экран «Домой» через Safari → Поделиться.");
-      return;
-    }
-    if (Notification.permission === "granted") {
-      alert("Уведомления включены ✓\nPush о новых заявках заработает после подключения сервера (Yandex Cloud).");
+      alert("Этот браузер не поддерживает уведомления. На iPhone добавьте админку на экран «Домой» через Safari → Поделиться, затем откройте её как приложение.");
       return;
     }
     if (Notification.permission === "denied") {
       alert("Уведомления запрещены в настройках. Разрешите их для этого сайта в настройках браузера/телефона.");
       return;
     }
-    const perm = await Notification.requestPermission();
-    if (perm === "granted") {
-      alert("Готово! Уведомления включены ✓\nPush о новых заявках заработает после подключения сервера (Yandex Cloud).");
+    let perm = Notification.permission;
+    if (perm !== "granted") perm = await Notification.requestPermission();
+    if (perm !== "granted") return;
+
+    if (!API_BASE || !VAPID_PUBLIC_KEY) {
+      alert("Уведомления разрешены ✓\nPush заработает после подключения сервера (заполнить API_BASE и VAPID_PUBLIC_KEY).");
+      return;
     }
+    const ok = await subscribeToPush();
+    alert(ok
+      ? "Готово! Push о новых заявках включён ✓"
+      : "Разрешение есть, но подписка не удалась. Проверьте VAPID-ключ и адрес API.");
   });
 
   // ---- Календарь заявок ----
@@ -1068,6 +1118,7 @@
       leads = await api.loadLeads();
       renderAll();
     });
+    maybeAutoSubscribePush();
   }
 
   document.getElementById("login-form").addEventListener("submit", async (e) => {

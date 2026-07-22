@@ -1,0 +1,91 @@
+openapi: 3.0.0
+info:
+  title: maldives-elite-api
+  version: 1.0.0
+  description: >
+    API Gateway для Maldives Elite.
+    /submit  → функция form-intake (приём заявки с формы сайта)
+    /login и /leads* → функция admin-api (вход и управление заявками)
+
+# =====================================================================
+#  ПЕРЕД ЗАГРУЗКОЙ замените ДВА плейсхолдера на реальные ID функций:
+#    <FUNCTION_ID_FORM_INTAKE>  — ID функции form-intake
+#    <FUNCTION_ID_ADMIN_API>    — ID функции admin-api
+#  ID виден в консоли: Cloud Functions → открыть функцию → строка "Идентификатор".
+#
+#  service_account_id — ID сервисного аккаунта с ролью functions.functionInvoker
+#  (можно тот же сервисный аккаунт, что и у функций). Замените <SERVICE_ACCOUNT_ID>.
+# =====================================================================
+
+paths:
+  /submit:
+    post:
+      summary: Приём заявки с формы сайта
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: <FUNCTION_ID_FORM_INTAKE>
+        service_account_id: <SERVICE_ACCOUNT_ID>
+    options:
+      summary: CORS preflight для /submit
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: <FUNCTION_ID_FORM_INTAKE>
+        service_account_id: <SERVICE_ACCOUNT_ID>
+
+  /login:
+    post:
+      summary: Вход в админку
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: <FUNCTION_ID_ADMIN_API>
+        service_account_id: <SERVICE_ACCOUNT_ID>
+    options:
+      summary: CORS preflight для /login
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: <FUNCTION_ID_ADMIN_API>
+        service_account_id: <SERVICE_ACCOUNT_ID>
+
+  /push/subscribe:
+    post:
+      summary: Регистрация push-подписки устройства
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: <FUNCTION_ID_ADMIN_API>
+        service_account_id: <SERVICE_ACCOUNT_ID>
+    options:
+      summary: CORS preflight для /push/subscribe
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: <FUNCTION_ID_ADMIN_API>
+        service_account_id: <SERVICE_ACCOUNT_ID>
+
+  /leads:
+    get:
+      summary: Список заявок
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: <FUNCTION_ID_ADMIN_API>
+        service_account_id: <SERVICE_ACCOUNT_ID>
+    options:
+      summary: CORS preflight для /leads
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: <FUNCTION_ID_ADMIN_API>
+        service_account_id: <SERVICE_ACCOUNT_ID>
+
+  # Любой путь вида /leads/{id} и /leads/{id}/status.
+  # greedy-параметр {proxy+} ловит и удаление, и смену статуса.
+  /leads/{proxy+}:
+    x-yc-apigateway-any-method:
+      summary: Операции над конкретной заявкой (PATCH статус, DELETE)
+      parameters:
+        - name: proxy
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: <FUNCTION_ID_ADMIN_API>
+        service_account_id: <SERVICE_ACCOUNT_ID>

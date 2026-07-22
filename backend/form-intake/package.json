@@ -1,5 +1,5 @@
 {
   "name": "form-intake",
   "version": "1.0.0",
-  "dependencies": { "ydb-sdk": "^5.9.0" }
+  "dependencies": { "ydb-sdk": "^5.9.0", "web-push": "^3.6.7" }
 }

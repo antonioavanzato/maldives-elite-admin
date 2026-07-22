@@ -10,8 +10,19 @@
    Окружение: YDB_ENDPOINT, YDB_DATABASE, TG_BOT_TOKEN, TG_CHAT_ID.
    Зависимости: ydb-sdk (package.json рядом). */
 
-const { Driver, getCredentialsFromEnv, TypedValues } = require("ydb-sdk");
+const { Driver, getCredentialsFromEnv, TypedValues, TypedData } = require("ydb-sdk");
 const { randomUUID } = require("crypto");
+const webpush = require("web-push");
+
+// VAPID-ключи задаются в переменных окружения функции (см. инструкцию).
+// Если их нет — push просто пропускается, приём заявки не ломается.
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || "mailto:admin@maldives-elite.ru",
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
 
 let driver; // переиспользуется между вызовами функции
 
@@ -46,6 +57,47 @@ async function notifyTelegram(clientName) {
     body: JSON.stringify({ chat_id: process.env.TG_CHAT_ID, text }),
   });
   if (!res.ok) console.error("Telegram notify failed:", await res.text());
+}
+
+// Push всем подписанным устройствам админки. Тоже только имя, без перс. данных.
+// Просроченные подписки (404/410) удаляются, чтобы таблица не копила мусор.
+async function notifyPush(clientName) {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
+  const d = await getDriver();
+
+  let subs = [];
+  await d.tableClient.withSession(async (session) => {
+    const { resultSets } = await session.executeQuery("SELECT endpoint, p256dh, auth FROM push_subs;");
+    subs = TypedData.createNativeObjects(resultSets[0]);
+  });
+  if (!subs.length) return;
+
+  const payload = JSON.stringify({
+    title: "Новая заявка 🌴",
+    body: clientName,
+    url: "./",
+  });
+
+  const dead = [];
+  await Promise.all(subs.map(async (s) => {
+    const subscription = { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } };
+    try {
+      await webpush.sendNotification(subscription, payload);
+    } catch (err) {
+      if (err && (err.statusCode === 404 || err.statusCode === 410)) dead.push(s.endpoint);
+      else console.error("push send failed:", err && err.statusCode, err && err.body);
+    }
+  }));
+
+  // подчистить отвалившиеся подписки
+  await Promise.all(dead.map((endpoint) =>
+    d.tableClient.withSession((session) =>
+      session.executeQuery(
+        "DECLARE $e AS Utf8; DELETE FROM push_subs WHERE endpoint = $e;",
+        { $e: TypedValues.utf8(endpoint) }
+      )
+    ).catch((e) => console.error("push sub cleanup failed:", e))
+  ));
 }
 
 exports.handler = async (event) => {
@@ -97,8 +149,9 @@ exports.handler = async (event) => {
     });
   });
 
-  // Уведомление в Telegram не должно ронять приём заявки
+  // Уведомления не должны ронять приём заявки
   try { await notifyTelegram(client); } catch (e) { console.error(e); }
+  try { await notifyPush(client); } catch (e) { console.error(e); }
 
   return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true, id }) };
 };

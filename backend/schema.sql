@@ -18,3 +18,14 @@ CREATE TABLE leads (
     created_at     Timestamp,
     PRIMARY KEY (id)
 );
+
+-- Подписки на push-уведомления (Web Push).
+-- Одна строка = одно устройство/браузер, где Мария разрешила уведомления.
+-- endpoint — уникальный URL подписки, он же первичный ключ.
+CREATE TABLE push_subs (
+    endpoint   Utf8,
+    p256dh     Utf8,               -- публичный ключ шифрования подписки
+    auth       Utf8,               -- секрет аутентификации подписки
+    created_at Timestamp,
+    PRIMARY KEY (endpoint)
+);
